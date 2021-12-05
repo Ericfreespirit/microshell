@@ -2,7 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-
+#include <sys/types.h>
+#include <sys/wait.h>
 typedef struct node
 {
 	char type;
@@ -20,6 +21,15 @@ int ft_strlen(char *str)
 	while(str[i])
 		i++;
 	return (i);
+}
+
+void ft_error(char *s1, char *s2)
+{
+	if (s1)
+		write(1, s1, ft_strlen(s1));
+	if (s2)
+		write(1, s2, ft_strlen(s2));
+	write(1, "\n", 1);
 }
 
 void	print_ast(t_node *node)
@@ -86,7 +96,10 @@ int	exec_cmd(t_node *ast, char **env)
 	if (pid > 0)
 		waitpid(pid, NULL, 0); 
 	else if (pid == 0)
+	{
 		execve(ast->arg[0], ast->arg, env);
+		ft_error("error: can't execute : ", ast->arg[0]);
+	}	
 	return (0);
 }
 
@@ -94,30 +107,30 @@ int exec_ast(t_node *ast, char **env)
 {
 	int pfd[2];
 	int	status;
-	pipe(pfd);
-	pid_t pid = fork();
-
-	/*if (ast->left != NULL && ast->right != NULL)
-	{
+	
+	if (ast->type == 'c')
+		exec_cmd(ast, env);
+	else
+	{	
+		pipe(pfd);
+		pid_t pid = fork();
 		if (pid == 0)
 		{
-			close(pfd[1]);
-			dup2(pfd[0], 0);
-			close(pfd[0]);	
+			close(pfd[0]);
+			dup2(pfd[1], 1);
+			close(pfd[1]);	
 			exec_ast(ast->left, env);
 			exit(0);
 		}
 		else if (pid > 0)
 		{
-			close(pfd[0]);
-			dup2(pfd[1], 1);
 			close(pfd[1]);
+			dup2(pfd[0], 0);
+			close(pfd[0]);
 			exec_ast(ast->right, env);
 			waitpid(pid, &status, 0);
 		}
 	}
-	*/if (ast->type == 'c')
-		exec_cmd(ast, env);
 	return (0);
 }
 
