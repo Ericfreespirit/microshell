@@ -79,7 +79,49 @@ t_node *get_tree(char ***av)
 	return (ast);
 }
 
-int main(int ac, char **av)
+int	exec_cmd(t_node *ast, char **env)
+{
+	pid_t pid = fork();
+
+	if (pid > 0)
+		waitpid(pid, NULL, 0); 
+	else if (pid == 0)
+		execve(ast->arg[0], ast->arg, env);
+	return (0);
+}
+
+int exec_ast(t_node *ast, char **env)
+{
+	int pfd[2];
+	int	status;
+	pipe(pfd);
+	pid_t pid = fork();
+
+	/*if (ast->left != NULL && ast->right != NULL)
+	{
+		if (pid == 0)
+		{
+			close(pfd[1]);
+			dup2(pfd[0], 0);
+			close(pfd[0]);	
+			exec_ast(ast->left, env);
+			exit(0);
+		}
+		else if (pid > 0)
+		{
+			close(pfd[0]);
+			dup2(pfd[1], 1);
+			close(pfd[1]);
+			exec_ast(ast->right, env);
+			waitpid(pid, &status, 0);
+		}
+	}
+	*/if (ast->type == 'c')
+		exec_cmd(ast, env);
+	return (0);
+}
+
+int main(int ac, char **av, char **env)
 {
 	t_node *ast;
 
@@ -87,8 +129,7 @@ int main(int ac, char **av)
 	{
 		av++;	
 		ast = get_tree(&av);
-		print_ast(ast);
-		//free_ast(ast);
-		printf("END TREE\n");
+		exec_ast(ast, env);
 	}
 }
+
