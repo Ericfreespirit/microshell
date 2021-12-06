@@ -4,6 +4,15 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
+void	after_main() __attribute__((destructor));
+
+
+void	after_main()
+{
+	system("leaks a.out");
+}
+
 typedef struct node
 {
 	char type;
@@ -39,6 +48,7 @@ void	print_ast(t_node *node)
 		print_ast(node->left);
 	if (node->right != NULL)
 		print_ast(node->right);
+	printf("type: %c\n", node->type);
 	if (node->arg != NULL)
 	{
 		for(int i=0;node->arg[i];i++)
@@ -51,9 +61,8 @@ t_node *create_node(int type, char ***av, t_node *left, t_node *right)
 {
 	t_node *node;
 	int	i = 0;
-
 	if ((node = malloc(sizeof(t_node))) == NULL)
-		return (NULL);	
+		ft_error("error: fatal\n", NULL);	
 	node->type = type;
 	node->arg = NULL;
 	node->left = left;
@@ -63,7 +72,7 @@ t_node *create_node(int type, char ***av, t_node *left, t_node *right)
 		while ((*av)[i] && strcmp((*av)[i], "|") && strcmp((*av)[i], ";"))
 			i++;	
 		if ((node->arg = malloc(sizeof(char *) * (i + 1))) == NULL)
-			return (NULL);
+			ft_error("error: fatal\n", NULL);	
 		node->arg[i] = 0;
 		i = 0;
 		while ((*av)[i] && strcmp((*av)[i], "|")&& strcmp((*av)[i], ";"))
@@ -80,7 +89,6 @@ t_node *get_tree(char ***av)
 {
 	t_node *ast;
 	int	i = 0;
-
 	ast = create_node('c', av, NULL, NULL);
 	while((*av)[i] && !strcmp((*av)[i], "|"))
 	{
@@ -98,7 +106,7 @@ void	ft_cd(t_node *ast)
 		i++;
 	if (i != 1)	
 		ft_error("error: cd: bad arguments", NULL);
-	if (chdir(ast->arg[1]) == -1)
+	else if (chdir(ast->arg[1]) == -1)
 		ft_error("error: cd : cannot change directory to", ast->arg[1]);
 }
 
@@ -117,8 +125,10 @@ int	exec_cmd(t_node *ast, char **env)
 	else if (pid == 0)
 	{
 		execve(ast->arg[0], ast->arg, env);
-		ft_error("error: can't execute : ", ast->arg[0]);
-	}	
+		ft_error("error: cannot execute ", ast->arg[0]);
+	}
+	else
+		ft_error("error: fatal\n", NULL);	
 	return (0);
 }
 
@@ -149,19 +159,37 @@ int exec_ast(t_node *ast, char **env)
 			exec_ast(ast->right, env);
 			waitpid(pid, &status, 0);
 		}
+		else
+			ft_error("error: fatal\n", NULL);	
 	}
 	return (0);
+}
+
+void	free_ast(t_node *node)
+{
+	if (node->left != NULL)
+		free_ast(node->left);
+	if (node->right != NULL)
+		free_ast(node->right);
+	if (node->arg != NULL)
+		free(node->arg);
+	free(node);
 }
 
 int main(int ac, char **av, char **env)
 {
 	t_node *ast;
-
+	
+	if (ac == 1)
+		return (0);
+	av++;
 	while (*av) 
 	{
-		av++;	
 		ast = get_tree(&av);
 		exec_ast(ast, env);
+		free_ast(ast);
+		if (*av != NULL)
+			av++;
 	}
 }
 
