@@ -26,10 +26,11 @@ int ft_strlen(char *str)
 void ft_error(char *s1, char *s2)
 {
 	if (s1)
-		write(1, s1, ft_strlen(s1));
+		write(2, s1, ft_strlen(s1));
 	if (s2)
-		write(1, s2, ft_strlen(s2));
+		write(2, s2, ft_strlen(s2));
 	write(1, "\n", 1);
+	exit(1);
 }
 
 void	print_ast(t_node *node)
@@ -89,10 +90,28 @@ t_node *get_tree(char ***av)
 	return (ast);
 }
 
+void	ft_cd(t_node *ast)
+{
+	int i = 0;
+
+	if (ast->arg[i])
+		i++;
+	if (i != 1)	
+		ft_error("error: cd: bad arguments", NULL);
+	if (chdir(ast->arg[1]) == -1)
+		ft_error("error: cd : cannot change directory to", ast->arg[1]);
+}
+
 int	exec_cmd(t_node *ast, char **env)
 {
-	pid_t pid = fork();
+	pid_t pid;
 
+	if (!strcmp(ast->arg[0], "cd"))
+	{
+		ft_cd(ast);
+		return (0);
+	}
+	pid = fork();
 	if (pid > 0)
 		waitpid(pid, NULL, 0); 
 	else if (pid == 0)
